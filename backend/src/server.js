@@ -54,6 +54,7 @@ const corsOptions = {
   maxAge: 3600,
 };
 
+// Use CORS middleware
 app.use(cors(corsOptions));
 
 // Handle preflight requests explicitly
@@ -84,7 +85,7 @@ const authLimiter = rateLimit({
 app.use(express.json({ limit: '10kb' })); // Parse JSON request body
 app.use(express.urlencoded({ extended: true, limit: '10kb' })); // Parse URL-encoded request body
 
-// Routes
+// Routes - Mount the auth routes at /api/auth
 app.use('/api/auth', authLimiter, authRoutes);
 
 // Root route
@@ -93,9 +94,10 @@ app.get('/', (req, res) => {
 });
 
 // CORS test route - accessible without authentication
-app.get('/api/test/cors', (req, res) => {
+app.get('/api/test-cors', (req, res) => {
   // Log request details
-  console.log('CORS Test Request:');
+  console.log('  Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('  URL:', req.originalUrl);
   console.log('  Origin:', req.headers.origin || 'No origin');
   console.log('  Headers:', JSON.stringify(req.headers, null, 2));
   
@@ -120,6 +122,20 @@ app.get('/api/test/cors', (req, res) => {
     },
     timestamp: new Date().toISOString()
   });
+});
+
+// Route error handling
+app.use((err, req, res, next) => {
+  if (err instanceof TypeError && err.message.includes('Missing parameter name')) {
+    console.error('Route parameter error:', err);
+    return res.status(500).json({
+      success: false,
+      error: {
+        message: 'Invalid route configuration'
+      }
+    });
+  }
+  next(err);
 });
 
 // Error handling middleware
